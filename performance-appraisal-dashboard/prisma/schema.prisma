@@ -7,18 +7,34 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id       String   @id @default(auto()) @map("_id") @db.ObjectId
+model Users {
+  id       String @id @default(auto()) @map("_id") @db.ObjectId
   name     String
   email    String
   username String
-  roles    String[]
+  roles    Role
 }
 
-model UserStoryRating {
-  id         String   @id @default(auto()) @map("_id") @db.ObjectId
-  reviewerId String   @db.ObjectId
-  revieweeId String   @db.ObjectId
-  metric     Json
-  comments   String[]
+model Questions {
+  id       String           @id @default(auto()) @map("_id") @db.ObjectId
+  question String
+  category QuestionCategory
+}
+
+model Answers {
+  id         String @id @default(auto()) @map("_id") @db.ObjectId
+  reviewerId String
+  revieweeId String
+  questionId String
+  answer     String
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum QuestionCategory {
+  UserStoryRating
+  Communication
 }
