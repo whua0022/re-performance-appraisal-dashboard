@@ -3,12 +3,12 @@ import { PrismaClient} from '@prisma/client'
 const prisma = new PrismaClient()
 
 
-// GET /api/answers/[id]
-// Gets answer
+// GET /api/answers/user/[id]
+// Gets answer by user
 export async function GET(req: Request,
     { params }: { params: { id: string }}) {
     try {
-        const answers = await getAllAnswers(params.id)
+        const answers = await getAnswers(params.id)
         
         return new Response(JSON.stringify(answers), 
             {
@@ -22,11 +22,11 @@ export async function GET(req: Request,
     }
 }
 
-const getAllAnswers = async (answerId: string) => {
+const getAnswers = async (reviewerId: string) => {
     const answers = await prisma.answers.findMany(
         {
             where:{
-                id: answerId
+                reviewerId: reviewerId
             }
         })
     return answers
