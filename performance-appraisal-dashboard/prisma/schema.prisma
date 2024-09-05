@@ -1,0 +1,40 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+model Users {
+  id       String @id @default(auto()) @map("_id") @db.ObjectId
+  name     String
+  email    String
+  username String
+  roles    Role
+}
+
+model Questions {
+  id       String           @id @default(auto()) @map("_id") @db.ObjectId
+  question String
+  category QuestionCategory
+}
+
+model Answers {
+  id         String @id @default(auto()) @map("_id") @db.ObjectId
+  reviewerId String
+  revieweeId String
+  questionId String
+  answer     String
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum QuestionCategory {
+  UserStoryRating
+  Communication
+}
