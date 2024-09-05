@@ -8,11 +8,12 @@ datasource db {
 }
 
 model Users {
-  id       String @id @default(auto()) @map("_id") @db.ObjectId
+  id       String   @id @default(auto()) @map("_id") @db.ObjectId
   name     String
   email    String
   username String
   roles    Role
+  teams    String[]
 }
 
 model Questions {
@@ -21,17 +22,33 @@ model Questions {
   category QuestionCategory
 }
 
-model Answers {
+model Surveys {
+  id        String @id @default(auto()) @map("_id") @db.ObjectId
+  creatorId String
+
+  devQuestionList     Json[]
+  reQuestionList      Json[]
+  managerQuestionList Json[]
+}
+
+model AnswerList {
   id         String @id @default(auto()) @map("_id") @db.ObjectId
   reviewerId String
   revieweeId String
-  questionId String
-  answer     String
+  surveyId   String
+  answers    Json[]
+}
+
+model Teams {
+  id      String   @id @default(auto()) @map("_id") @db.ObjectId
+  name    String
+  members String[]
 }
 
 enum Role {
   USER
-  ADMIN
+  RE
+  MANAGER
 }
 
 enum QuestionCategory {
