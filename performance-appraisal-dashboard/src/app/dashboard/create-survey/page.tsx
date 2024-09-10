@@ -5,7 +5,7 @@ import FormGroup from '@mui/material/FormGroup';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Checkbox from '@mui/material/Checkbox';
 import Button from '@mui/material/Button';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {Questions, QuestionCategory, Surveys} from '@prisma/client'
 
 export default function CreateSurvey() {
@@ -14,12 +14,10 @@ export default function CreateSurvey() {
     const [reQuestions, setReQuestions] = useState<Questions[]>([])
     const [managerQuestions, setManagerQuestions] = useState<Questions[]>([])
     const [checkedQuestions, setCheckedQuestions] = useState<{ [id: string]: boolean }>({})
-
-    let questionList: Questions[] = [
-        {id: "1", question:"Question 1: Test", category: QuestionCategory.Communication}, 
-        {id: "2", question:"Question 2: Test", category: QuestionCategory.UserStoryRating},
-        {id: "3", question:"Question 3: Test", category: QuestionCategory.Communication},
-    ]
+    const [questionList, setQuestionList] = useState<Questions[]>([])
+    useEffect(() => {
+       fetchQuestions()
+    }, [])
 
     const [currRoleQuestionSelection, setCurrRoleQuestionSelection] = useState(0);
 
@@ -62,6 +60,26 @@ export default function CreateSurvey() {
         }
     }
 
+    const fetchQuestions = async () => {
+        try {
+            const res = await fetch("/api/questions", {
+                method: "GET",
+                headers: {
+                    'Accept': "application/json"
+                }
+            })
+    
+            if (!res.ok) {
+                throw new Error(`HTTP error! status: ${res.status}`);
+            }
+    
+            const result = await res.json()
+            setQuestionList(() => result)
+        } catch(error) {
+            console.error("Error getting questions: ", error)
+        }
+    }
+
     return (
         <main className="flex min-h-screen flex-col items-center justify-between p-24">
             <div>
@@ -89,7 +107,7 @@ export default function CreateSurvey() {
 
 const createSurvey = async (survey: any) => {
     try {
-        const response = await fetch('/api/survey/create', {
+        const res = await fetch('/api/survey/create', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -97,14 +115,15 @@ const createSurvey = async (survey: any) => {
             body: JSON.stringify(survey)
         });
 
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+        if (!res.ok) {
+            throw new Error(`HTTP error! status: ${res.status}`);
         }
 
-        const result = await response.json()
+        const result = await res.json()
         console.log('Survey created:', result);
         return result;
     } catch(error) {
         console.error('Error creating survey:', error);
     }
 }
+
