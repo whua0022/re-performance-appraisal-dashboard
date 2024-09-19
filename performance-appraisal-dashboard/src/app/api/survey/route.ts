@@ -11,7 +11,7 @@ export async function POST(req: Request) {
 
         const surveyDetails = {
             creatorId: body.creatorId,
-            name: body.name,
+            name: body.surveyName,
             devQuestionList: body.devQuestionList,
             reQuestionList: body.reQuestionList,
             managerQuestionList: body.managerQuestionList

@@ -45,12 +45,14 @@ model Teams {
 }
 
 enum Role {
-  USER
+  DEV
   RE
   MANAGER
 }
 
 enum QuestionCategory {
-  UserStoryRating
+  User_Story_Quality
   Communication
+  Time_Management
+  Technical_Proficiency
 }

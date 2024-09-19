@@ -3,11 +3,13 @@ import { NextRequest } from 'next/server'
 
 const prisma = new PrismaClient()
 
-// GET /api/teams
-// Returns an array of team names
+// GET /user/team?userId=
 export async function GET(req: NextRequest) {
     try {
-        const teams = await getTeams()
+        const searchParams = req.nextUrl.searchParams
+        const userId = searchParams.get("userId") || ""
+
+        const teams = await getTeamsForMember(userId)
 
         return new Response(JSON.stringify(teams), 
             {
@@ -15,13 +17,20 @@ export async function GET(req: NextRequest) {
                 headers: {'Content-Type': 'application/json'}
             }
         )
-    } catch (err) {
+    } catch(err) {
         console.error('Error: ', err)
         return new Response("Error", {status: 500})
     }
+
 }
 
-const getTeams = async () => {
-    const data = await prisma.teams.findMany()
-    return data
+const getTeamsForMember = async (memberId: string) => {
+    const teams = await prisma.teams.findMany({
+        where: {
+            members: {
+                has: memberId 
+            }
+        }
+    });
+    return teams;
 }

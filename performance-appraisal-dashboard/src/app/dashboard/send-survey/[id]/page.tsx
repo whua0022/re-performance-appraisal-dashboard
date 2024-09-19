@@ -1,5 +1,5 @@
 'use client'
-import { TableContainer, Paper, Table, TableBody, TableRow, TableCell } from "@mui/material";
+import { TableContainer, Paper, Table, TableBody, TableRow, TableCell, Box, Button, Typography } from "@mui/material";
 import { Surveys } from "@prisma/client";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -56,7 +56,7 @@ export default function SurveyDetailsPage({params}: {params: {id: string}}) {
 
         for (const member of members) {
             try {
-                const res = await fetch("/api/survey/send?role=USER", {
+                const res = await fetch("/api/survey/send?role=" + member.roles, {
                     method: "POST",
                     headers: {
                         'Accept': "application/json"
@@ -78,77 +78,72 @@ export default function SurveyDetailsPage({params}: {params: {id: string}}) {
         }
     }
     return (
-        <div>
-            <h1>Questions for Developers</h1>
-            <TableContainer component={Paper}>
+        <Box sx={{ p: 3, display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <Typography variant="h4" component="h1" sx={{ mb: 2 }}>
+                Questions for Developers
+            </Typography>
+            <TableContainer component={Paper} sx={{ mb: 4 }}>
                 <Table sx={{ minWidth: 650 }}>
                     <TableBody>
-                        {
-                            Array.isArray(survey.devQuestionList) && survey.devQuestionList.map((question, index) => (
-                                <TableRow
-                                    key={question?.id}
-                                    sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
-                                >
-                                <TableCell component="th" scope="row">
-                                    {question?.question}
-                                </TableCell>
-                                <TableCell component="th" scope="row">
-                                    {question?.category}
-                                </TableCell>
+                        {Array.isArray(survey.devQuestionList) && survey.devQuestionList.map((question: any) => (
+                            <TableRow
+                                key={question?.id}
+                                sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
+                            >
+                                <TableCell>{question?.question}</TableCell>
+                                <TableCell>{question?.category}</TableCell>
                             </TableRow>
-                            ))
-                        }
-                    </TableBody>  
-                </Table>
-            </TableContainer>
-            
-            <h1>Questions for Requirement Engineers</h1>
-            <TableContainer component={Paper}>
-                <Table sx={{ minWidth: 650 }}>
-                    <TableBody>
-                        {
-                            Array.isArray(survey.reQuestionList) && survey.devQuestionList.map((question, index) => (
-                                <TableRow
-                                    key={question?.id}
-                                    sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
-                                >
-                                <TableCell component="th" scope="row">
-                                    {question?.question}
-                                </TableCell>
-                                <TableCell component="th" scope="row">
-                                    {question?.category}
-                                </TableCell>
-                            </TableRow>
-                            ))
-                        }
-                    </TableBody>  
+                        ))}
+                    </TableBody>
                 </Table>
             </TableContainer>
 
-            <h1>Questions for Managers</h1>
-            <TableContainer component={Paper}>
+            <Typography variant="h4" component="h1" sx={{ mb: 2 }}>
+                Questions for Requirement Engineers
+            </Typography>
+            <TableContainer component={Paper} sx={{ mb: 4 }}>
                 <Table sx={{ minWidth: 650 }}>
                     <TableBody>
-                        {
-                            Array.isArray(survey.managerQuestionList) && survey.devQuestionList.map((question, index) => (
-                                <TableRow
-                                    key={question?.id}
-                                    sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
-                                >
-                                <TableCell component="th" scope="row">
-                                    {question?.question}
-                                </TableCell>
-                                <TableCell component="th" scope="row">
-                                    {question?.category}
-                                </TableCell>
+                        {Array.isArray(survey.reQuestionList) && survey.reQuestionList.map((question: any) => (
+                            <TableRow
+                                key={question?.id}
+                                sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
+                            >
+                                <TableCell>{question?.question}</TableCell>
+                                <TableCell>{question?.category}</TableCell>
                             </TableRow>
-                            ))
-                        }
-                    </TableBody>  
+                        ))}
+                    </TableBody>
                 </Table>
             </TableContainer>
-            <button onClick={() => {sendSurvey(teamId || "") }}>Send</button>
-        </div>
 
+            <Typography variant="h4" component="h1" sx={{ mb: 2 }}>
+                Questions for Managers
+            </Typography>
+            <TableContainer component={Paper} sx={{ mb: 4 }}>
+                <Table sx={{ minWidth: 650 }}>
+                    <TableBody>
+                        {Array.isArray(survey.managerQuestionList) && survey.managerQuestionList.map((question: any) => (
+                            <TableRow
+                                key={question?.id}
+                                sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
+                            >
+                                <TableCell>{question?.question}</TableCell>
+                                <TableCell>{question?.category}</TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+            </TableContainer>
+
+            <Button
+                variant="contained"
+                color="primary"
+                onClick={() => sendSurvey(teamId || "")}
+                sx={{ alignSelf: 'center' }}
+            >
+                Send
+            </Button>
+        </Box>
     )
 }

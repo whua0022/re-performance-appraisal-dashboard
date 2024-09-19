@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
             answers: [] as Array<{ category: string; question: string; answer: any }>
         }
 
-        if (role == "USER") {
+        if (role == "DEV") {
             (questions?.devQuestionList as AnswerQuestion[])?.forEach((question) => {
                 surveyToSend.answers.push({
                   category: question.category,
