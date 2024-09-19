@@ -84,6 +84,7 @@ export default function CreateSurvey() {
         <main className="flex min-h-screen flex-col items-center justify-between p-24">
             <div>
                 <h1>Select a question for {roles[currRoleQuestionSelection]}</h1>
+                {/* TODO ADD SURVEY NAME INPUT */}
                 <Box sx={{ width: '100%', maxWidth: 360, bgcolor: 'background.paper' }}>
                     <nav aria-label="main">
                         <List>
@@ -107,7 +108,7 @@ export default function CreateSurvey() {
 
 const createSurvey = async (survey: any) => {
     try {
-        const res = await fetch('/api/survey/create', {
+        const res = await fetch('/api/survey', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'

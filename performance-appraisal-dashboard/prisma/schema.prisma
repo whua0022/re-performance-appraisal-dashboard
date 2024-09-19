@@ -8,12 +8,11 @@ datasource db {
 }
 
 model Users {
-  id       String   @id @default(auto()) @map("_id") @db.ObjectId
+  id       String @id @default(auto()) @map("_id") @db.ObjectId
   name     String
   email    String
   username String
   roles    Role
-  teams    String[]
 }
 
 model Questions {
@@ -23,20 +22,20 @@ model Questions {
 }
 
 model Surveys {
-  id        String @id @default(auto()) @map("_id") @db.ObjectId
-  creatorId String
-
+  id                  String @id @default(auto()) @map("_id") @db.ObjectId
+  name                String
+  creatorId           String
   devQuestionList     Json[]
   reQuestionList      Json[]
   managerQuestionList Json[]
 }
 
 model AnswerList {
-  id         String @id @default(auto()) @map("_id") @db.ObjectId
-  reviewerId String
-  revieweeId String
-  surveyId   String
-  answers    Json[]
+  id          String  @id @default(auto()) @map("_id") @db.ObjectId
+  reviewerId  String
+  revieweeId  String
+  answers     Json[]
+  isCompleted Boolean
 }
 
 model Teams {
