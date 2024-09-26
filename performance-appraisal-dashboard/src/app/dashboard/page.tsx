@@ -1,7 +1,7 @@
-'use client';
-import React, { useEffect, useState } from 'react';
-import { Grid, Paper, Typography, Button, Autocomplete, TextField, Select, MenuItem, FormControl, InputLabel } from '@mui/material';
-import { Bar } from 'react-chartjs-2'; // Import Bar from react-chartjs-2
+'use client' 
+import React, { useEffect, useState } from 'react' 
+import { Grid, Paper, Typography, Button, Autocomplete, TextField, Select, MenuItem, FormControl, InputLabel } from '@mui/material' 
+import { Bar } from 'react-chartjs-2'
 import {
     Chart as ChartJS,
     CategoryScale,
@@ -10,32 +10,32 @@ import {
     Title,
     Tooltip,
     Legend,
-} from 'chart.js';
+} from 'chart.js' 
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
+ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend) 
 
 export default function Dashboard() {
-    const [reId, setReId] = useState("");
-    const [surveyId, setSurveyId] = useState("");
-    const [answerType, setAnswerType] = useState("All");
-    const [category, setCategory] = useState("All");
+    const [reId, setReId] = useState("") 
+    const [surveyId, setSurveyId] = useState("") 
+    const [answerType, setAnswerType] = useState("All") 
+    const [category, setCategory] = useState("All") 
 
-    const [reOptions, setReOptions] = useState<{ id: string, name: string }[]>([]);
-    const [surveyOptions, setSurveyOptions] = useState<{ id: string, name: string }[]>([]);
-    const [questionOptions, setQuestionOptions] = useState<string[]>(["All"]);
-    const [graphData, setGraphData] = useState<any>(null);
+    const [reOptions, setReOptions] = useState<{ id: string, name: string }[]>([]) 
+    const [surveyOptions, setSurveyOptions] = useState<{ id: string, name: string }[]>([]) 
+    const [questionOptions, setQuestionOptions] = useState<string[]>(["All"]) 
+    const [graphData, setGraphData] = useState<any>(null) 
 
     useEffect(() => {
-        fetchRe();
-    }, []);
+        fetchRe() 
+    }, []) 
 
     useEffect(() => {
         if (answerType === "ALL") {
-            setQuestionOptions(() => ["ALL"]);
+            setQuestionOptions(() => ["ALL"]) 
         } else {
-            fetchSurveys();
+            fetchSurveys() 
         }
-    }, [surveyId, reId, answerType, category]);
+    }, [surveyId, reId, answerType, category]) 
 
     const fetchRe = async () => {
         try {
@@ -44,22 +44,22 @@ export default function Dashboard() {
                 headers: {
                     'Accept': "application/json"
                 }
-            });
+            }) 
 
             if (!res.ok) {
-                throw new Error(`HTTP error! status: ${res.status}`);
+                throw new Error(`HTTP error! status: ${res.status}`) 
             }
 
-            const result = await res.json();
+            const result = await res.json() 
             const options = result.map((re: any) => ({
                 id: re.id,
                 name: re.name
-            }));
-            setReOptions(options);
+            })) 
+            setReOptions(options) 
         } catch (error) {
-            console.error("Error fetching teams: ", error);
+            console.error("Error fetching teams: ", error) 
         }
-    };
+    } 
 
     const fetchSurveyName = async (surveyId: string) => {
         try {
@@ -68,19 +68,19 @@ export default function Dashboard() {
                 headers: {
                     'Accept': "application/json"
                 }
-            });
+            }) 
     
             if (!res.ok) {
-                throw new Error(`Failed to fetch survey name for surveyId: ${surveyId}, status: ${res.status}`);
+                throw new Error(`Failed to fetch survey name for surveyId: ${surveyId}, status: ${res.status}`) 
             }
     
-            const data = await res.json();
-            return data.name;
+            const data = await res.json() 
+            return data.name 
         } catch (error) {
-            console.error("Error fetching survey name: ", error);
-            return null;
+            console.error("Error fetching survey name: ", error) 
+            return null 
         }
-    };
+    } 
     
     const fetchSurveys = async () => {
         try {
@@ -89,63 +89,63 @@ export default function Dashboard() {
                 headers: {
                     'Accept': "application/json"
                 }
-            });
+            }) 
     
             if (!res.ok) {
-                throw new Error(`HTTP error! status: ${res.status}`);
+                throw new Error(`HTTP error! status: ${res.status}`) 
             }
     
-            const result = await res.json();
+            const result = await res.json() 
     
-            const surveyIds: string[] = [];
-            const surveyOptions: { id: string, name: string }[] = [];
+            const surveyIds: string[] = [] 
+            const surveyOptions: { id: string, name: string }[] = [] 
     
             for (const item of result) {
                 if (!surveyIds.includes(item.surveyId)) {
-                    surveyIds.push(item.surveyId);
-                    const surveyName = await fetchSurveyName(item.surveyId);
+                    surveyIds.push(item.surveyId) 
+                    const surveyName = await fetchSurveyName(item.surveyId) 
                     surveyOptions.push({
                         id: item.surveyId,
                         name: surveyName || item.surveyId
-                    });
+                    }) 
                 }
             }
     
-            setSurveyOptions(surveyOptions);
+            setSurveyOptions(surveyOptions) 
     
             if (surveyId !== "All") {
                 // Filter surveys by surveyId, answerType, and category
                 const filteredSurveys = result.filter((survey: any) => 
                     survey.surveyId === surveyId && survey.type === answerType
-                );
+                ) 
 
                 if (filteredSurveys.length > 0) {
-                    const questionMap: { [key: string]: { total: number, count: number } } = {};
+                    const questionMap: { [key: string]: { total: number, count: number } } = {} 
     
                     filteredSurveys.forEach((survey: any) => {
                         survey.answers.forEach((q: any) => {
                             if (category === "All" || q.category === category) {
                                 if (!questionMap[q.question]) {
-                                    questionMap[q.question] = { total: 0, count: 0 };
+                                    questionMap[q.question] = { total: 0, count: 0 } 
                                 }
-                                questionMap[q.question].total += parseInt(q.answer);
-                                questionMap[q.question].count += 1; 
+                                questionMap[q.question].total += parseInt(q.answer) 
+                                questionMap[q.question].count += 1  
                             }
-                        });
-                    });
+                        }) 
+                    }) 
                     
                     const answersForGraph = Object.keys(questionMap).map(question => ({
                         question: question,
                         answer: questionMap[question].total / questionMap[question].count
-                    }));
-                    setQuestionOptions(["All", ...Object.keys(questionMap)]);
-                    setGraphData(answersForGraph);
+                    })) 
+                    setQuestionOptions(["All", ...Object.keys(questionMap)]) 
+                    setGraphData(answersForGraph) 
                 }
             }
         } catch (error) {
-            console.error("Error fetching surveys: ", error);
+            console.error("Error fetching surveys: ", error) 
         }
-    };
+    } 
     
     // Prepare data for the bar chart using graphData
     const chartData = {
@@ -159,10 +159,10 @@ export default function Dashboard() {
                 borderWidth: 1,
             },
         ],
-    };
+    } 
 
     const chartOptions = {
-        indexAxis: 'y',  // This makes the chart horizontal
+        indexAxis: 'y',
         responsive: true,
         scales: {
             x: {  
@@ -174,7 +174,7 @@ export default function Dashboard() {
                 position: 'top',
             },
         },
-    };
+    } 
 
     return (
         <main className="min-h-screen p-6 bg-gray-100">
@@ -256,5 +256,5 @@ export default function Dashboard() {
                 </div>
             </div>
         </main>
-    );
+    ) 
 }
