@@ -17,12 +17,11 @@ ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
 export default function Dashboard() {
     const [reId, setReId] = useState("");
     const [surveyId, setSurveyId] = useState("");
-    const [questionId, setQuestionId] = useState("");
     const [answerType, setAnswerType] = useState("All");
-    const [category, setCategory] = useState("All");  // For category filtering
+    const [category, setCategory] = useState("All");
 
     const [reOptions, setReOptions] = useState<{ id: string, name: string }[]>([]);
-    const [surveyOptions, setSurveyOptions] = useState<{ id: string, name: string }[]>([{ id: "All", name: "All" }]);
+    const [surveyOptions, setSurveyOptions] = useState<{ id: string, name: string }[]>([]);
     const [questionOptions, setQuestionOptions] = useState<string[]>(["All"]);
     const [graphData, setGraphData] = useState<any>(null);
 
@@ -36,7 +35,7 @@ export default function Dashboard() {
         } else {
             fetchSurveys();
         }
-    }, [surveyId, reId, answerType, category]);  // Add category to the dependencies
+    }, [surveyId, reId, answerType, category]);
 
     const fetchRe = async () => {
         try {
@@ -98,8 +97,8 @@ export default function Dashboard() {
     
             const result = await res.json();
     
-            const surveyIds: string[] = ["All"];
-            const surveyOptions: { id: string, name: string }[] = [{ id: "All", name: "All" }];
+            const surveyIds: string[] = [];
+            const surveyOptions: { id: string, name: string }[] = [];
     
             for (const item of result) {
                 if (!surveyIds.includes(item.surveyId)) {
@@ -115,31 +114,29 @@ export default function Dashboard() {
             setSurveyOptions(surveyOptions);
     
             if (surveyId !== "All") {
-                // Filter surveys by surveyId and answerType
+                // Filter surveys by surveyId, answerType, and category
                 const filteredSurveys = result.filter((survey: any) => 
                     survey.surveyId === surveyId && survey.type === answerType
                 );
-    
+
                 if (filteredSurveys.length > 0) {
-                    // Initialize a map to accumulate answers for each question
                     const questionMap: { [key: string]: { total: number, count: number } } = {};
     
-                    // Loop through each filtered survey and accumulate answers
                     filteredSurveys.forEach((survey: any) => {
                         survey.answers.forEach((q: any) => {
-                            if (!questionMap[q.question]) {
-                                questionMap[q.question] = { total: 0, count: 0 };
+                            if (category === "All" || q.category === category) {
+                                if (!questionMap[q.question]) {
+                                    questionMap[q.question] = { total: 0, count: 0 };
+                                }
+                                questionMap[q.question].total += parseInt(q.answer);
+                                questionMap[q.question].count += 1; 
                             }
-
-                            questionMap[q.question].total += parseInt(q.answer);
-                            questionMap[q.question].count += 1;       // Count answers
                         });
                     });
                     
-                    // Prepare the graph data by averaging answers
                     const answersForGraph = Object.keys(questionMap).map(question => ({
                         question: question,
-                        answer: questionMap[question].total / questionMap[question].count // Average
+                        answer: questionMap[question].total / questionMap[question].count
                     }));
                     setQuestionOptions(["All", ...Object.keys(questionMap)]);
                     setGraphData(answersForGraph);
@@ -152,11 +149,11 @@ export default function Dashboard() {
     
     // Prepare data for the bar chart using graphData
     const chartData = {
-        labels: graphData?.map((d: any) => d.question) || [], // Y-axis labels (questions)
+        labels: graphData?.map((d: any) => d.question) || [],
         datasets: [
             {
                 label: 'Average Score',
-                data: graphData?.map((d: any) => d.answer) || [], // X-axis data (answers)
+                data: graphData?.map((d: any) => d.answer) || [],
                 backgroundColor: 'rgba(75, 192, 192, 0.6)',
                 borderColor: 'rgba(75, 192, 192, 1)',
                 borderWidth: 1,
@@ -168,20 +165,25 @@ export default function Dashboard() {
         indexAxis: 'y',  // This makes the chart horizontal
         responsive: true,
         scales: {
-            x: {  // X-axis contains the average scores
+            x: {  
                 beginAtZero: true,
+            },
+        },
+        plugins: {
+            legend: {
+                position: 'top',
             },
         },
     };
 
     return (
-        <main style={{ minHeight: '100vh', padding: '24px', backgroundColor: '#f5f5f5' }}>
-            <Typography variant="h4" gutterBottom style={{ marginBottom: '24px', textAlign: 'center' }}>
+        <main className="min-h-screen p-6 bg-gray-100">
+            <Typography variant="h4" className="mb-6 text-center">
                 Home
             </Typography>
-            <Grid container spacing={3}>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 {/* RE Autocomplete */}
-                <Grid item xs={12} md={4}>
+                <div className="bg-white p-4 rounded-lg shadow">
                     <Autocomplete
                         fullWidth
                         options={reOptions}
@@ -190,10 +192,10 @@ export default function Dashboard() {
                         onChange={(event, newValue) => setReId(newValue ? newValue.id : '')}
                         renderInput={(params) => <TextField {...params} label="Requirement Engineer" variant="outlined" />}
                     />
-                </Grid>
+                </div>
 
                 {/* Survey Autocomplete */}
-                <Grid item xs={12} md={4}>
+                <div className="bg-white p-4 rounded-lg shadow">
                     <Autocomplete
                         fullWidth
                         options={surveyOptions}
@@ -202,10 +204,10 @@ export default function Dashboard() {
                         onChange={(event, newValue) => setSurveyId(newValue ? newValue.id : '')}
                         renderInput={(params) => <TextField {...params} label="Survey" variant="outlined" />}
                     />
-                </Grid>
+                </div>
 
                 {/* Answer Type Dropdown */}
-                <Grid item xs={12} md={4}>
+                <div className="bg-white p-4 rounded-lg shadow">
                     <FormControl fullWidth variant="outlined" disabled={!reId || !surveyId}>
                         <InputLabel>Answer Type</InputLabel>
                         <Select
@@ -213,16 +215,15 @@ export default function Dashboard() {
                             onChange={(event) => setAnswerType(event.target.value)}
                             label="Answer Type"
                         >
-                            <MenuItem value="All">All</MenuItem>
                             <MenuItem value="DEV">Dev</MenuItem>
                             <MenuItem value="RE">RE</MenuItem>
                             <MenuItem value="MANAGER">Manager</MenuItem>
                         </Select>
                     </FormControl>
-                </Grid>
+                </div>
 
                 {/* Question Category Dropdown */}
-                <Grid item xs={12} md={4}>
+                <div className="bg-white p-4 rounded-lg shadow">
                     <FormControl fullWidth variant="outlined" disabled={!reId || !surveyId}>
                         <InputLabel>Category</InputLabel>
                         <Select
@@ -232,34 +233,28 @@ export default function Dashboard() {
                         >
                             <MenuItem value="All">All</MenuItem>
                             <MenuItem value="Communication">Communication</MenuItem>
-                            <MenuItem value="Responsiveness">Responsiveness</MenuItem>
-                            <MenuItem value="Collaboration">Collaboration</MenuItem>
+                            <MenuItem value="User_Story_Quality">User Story Quality</MenuItem>
+                            <MenuItem value="Time_Management">Time Management</MenuItem>
+                            <MenuItem value="Technical_Proficiency">Technical Proficiency</MenuItem>
                         </Select>
                     </FormControl>
-                </Grid>
+                </div>
+            </div>
 
-                {/* Submit Button */}
-                <Grid item xs={12} style={{ textAlign: 'center', marginTop: '16px' }}>
-                    <Button variant="contained" color="primary" onClick={() => console.log(reId, surveyId, questionId)} disabled={!reId || !surveyId}>
-                        Submit
-                    </Button>
-                </Grid>
-
-                {/* Overview Chart */}
-                <Grid item xs={12}>
-                    <Paper elevation={3} style={{ padding: '16px' }}>
-                        <Typography variant="h6" gutterBottom>
-                            Overview Chart
-                        </Typography>
-                        {/* Display Bar chart here */}
-                        {graphData && (
-                            <div style={{ height: '400px' }}>
-                                <Bar data={chartData} options={chartOptions} />
-                            </div>
-                        )}
-                    </Paper>
-                </Grid>
-            </Grid>
+            {/* Overview Chart */}
+            <div className="flex justify-center items-center mt-10">
+                <div className="w-full lg:w-3/4 bg-white p-8 rounded-lg shadow-lg">
+                    <Typography variant="h6" className="mb-4">
+                        Overview Chart
+                    </Typography>
+                    {/* Display Bar chart here */}
+                    {graphData && (
+                        <div className="h-[600px] w-full">
+                            <Bar data={chartData} options={chartOptions} />
+                        </div>
+                    )}
+                </div>
+            </div>
         </main>
     );
 }
