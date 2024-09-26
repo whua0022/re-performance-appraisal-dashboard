@@ -15,11 +15,12 @@
     "@mui/icons-material": "^6.0.2",
     "@mui/material": "^6.0.2",
     "@prisma/client": "^5.18.0",
-    "chartjs": "^0.3.24",
+    "chart.js": "^4.4.4",
     "next": "14.2.5",
     "performance-appraisal-dashboard": "file:",
     "prisma": "^5.18.0",
     "react": "^18",
+    "react-chartjs-2": "^5.2.0",
     "react-dom": "^18"
   },
   "devDependencies": {

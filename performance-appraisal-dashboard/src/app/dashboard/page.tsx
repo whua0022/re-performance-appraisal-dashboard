@@ -1,17 +1,31 @@
 'use client';
 import React, { useEffect, useState } from 'react';
 import { Grid, Paper, Typography, Button, Autocomplete, TextField, Select, MenuItem, FormControl, InputLabel } from '@mui/material';
+import { Bar } from 'react-chartjs-2'; // Import Bar from react-chartjs-2
+import {
+    Chart as ChartJS,
+    CategoryScale,
+    LinearScale,
+    BarElement,
+    Title,
+    Tooltip,
+    Legend,
+} from 'chart.js';
+
+ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
 export default function Dashboard() {
     const [reId, setReId] = useState("");
     const [surveyId, setSurveyId] = useState("");
     const [questionId, setQuestionId] = useState("");
     const [answerType, setAnswerType] = useState("All");
+    const [category, setCategory] = useState("All");  // For category filtering
 
     const [reOptions, setReOptions] = useState<{ id: string, name: string }[]>([]);
     const [surveyOptions, setSurveyOptions] = useState<{ id: string, name: string }[]>([{ id: "All", name: "All" }]);
     const [questionOptions, setQuestionOptions] = useState<string[]>(["All"]);
-    const [graphData, setGraphData] = useState<any>(null)
+    const [graphData, setGraphData] = useState<any>(null);
+
     useEffect(() => {
         fetchRe();
     }, []);
@@ -22,10 +36,8 @@ export default function Dashboard() {
         } else {
             fetchSurveys();
         }
-    }, [surveyId, reId, answerType]);
+    }, [surveyId, reId, answerType, category]);  // Add category to the dependencies
 
-    console.log(graphData)
-    // Fetch RE and store both id and name
     const fetchRe = async () => {
         try {
             const res = await fetch(`/api/teams/re`, {
@@ -64,10 +76,10 @@ export default function Dashboard() {
             }
     
             const data = await res.json();
-            return data.name; // Assuming the API returns the survey name in 'name' field
+            return data.name;
         } catch (error) {
             console.error("Error fetching survey name: ", error);
-            return null; // Return null or a placeholder in case of error
+            return null;
         }
     };
     
@@ -88,8 +100,7 @@ export default function Dashboard() {
     
             const surveyIds: string[] = ["All"];
             const surveyOptions: { id: string, name: string }[] = [{ id: "All", name: "All" }];
-            
-            // Add all surveys to survey options
+    
             for (const item of result) {
                 if (!surveyIds.includes(item.surveyId)) {
                     surveyIds.push(item.surveyId);
@@ -104,24 +115,34 @@ export default function Dashboard() {
             setSurveyOptions(surveyOptions);
     
             if (surveyId !== "All") {
-                // Filter by selected survey ID and role type (answerType)
-                const filteredSurvey = result.find((survey: any) => survey.surveyId === surveyId && survey.type === answerType);
+                // Filter surveys by surveyId and answerType
+                const filteredSurveys = result.filter((survey: any) => 
+                    survey.surveyId === surveyId && survey.type === answerType
+                );
     
-                if (filteredSurvey) {
-                    // Extract questions for this specific survey and type
-                    const questions = filteredSurvey.answers.map((q: any) => q.question);
+                if (filteredSurveys.length > 0) {
+                    // Initialize a map to accumulate answers for each question
+                    const questionMap: { [key: string]: { total: number, count: number } } = {};
     
-                    // Set question options (All + questions related to the selected survey)
-                    setQuestionOptions(["All", ...questions]);
+                    // Loop through each filtered survey and accumulate answers
+                    filteredSurveys.forEach((survey: any) => {
+                        survey.answers.forEach((q: any) => {
+                            if (!questionMap[q.question]) {
+                                questionMap[q.question] = { total: 0, count: 0 };
+                            }
+
+                            questionMap[q.question].total += parseInt(q.answer);
+                            questionMap[q.question].count += 1;       // Count answers
+                        });
+                    });
                     
-                    // Store answers for graphs (you can further process this later)
-                    const answersForGraph = filteredSurvey.answers.map((q: any) => ({
-                        question: q.question,
-                        answer: q.answer // Assuming 'answer' exists in the structure
+                    // Prepare the graph data by averaging answers
+                    const answersForGraph = Object.keys(questionMap).map(question => ({
+                        question: question,
+                        answer: questionMap[question].total / questionMap[question].count // Average
                     }));
-    
-                    // Store answers for future graph generation
-                    setGraphData(answersForGraph);  // setGraphData should be a state to store answers for graphs
+                    setQuestionOptions(["All", ...Object.keys(questionMap)]);
+                    setGraphData(answersForGraph);
                 }
             }
         } catch (error) {
@@ -129,6 +150,30 @@ export default function Dashboard() {
         }
     };
     
+    // Prepare data for the bar chart using graphData
+    const chartData = {
+        labels: graphData?.map((d: any) => d.question) || [], // Y-axis labels (questions)
+        datasets: [
+            {
+                label: 'Average Score',
+                data: graphData?.map((d: any) => d.answer) || [], // X-axis data (answers)
+                backgroundColor: 'rgba(75, 192, 192, 0.6)',
+                borderColor: 'rgba(75, 192, 192, 1)',
+                borderWidth: 1,
+            },
+        ],
+    };
+
+    const chartOptions = {
+        indexAxis: 'y',  // This makes the chart horizontal
+        responsive: true,
+        scales: {
+            x: {  // X-axis contains the average scores
+                beginAtZero: true,
+            },
+        },
+    };
+
     return (
         <main style={{ minHeight: '100vh', padding: '24px', backgroundColor: '#f5f5f5' }}>
             <Typography variant="h4" gutterBottom style={{ marginBottom: '24px', textAlign: 'center' }}>
@@ -140,9 +185,9 @@ export default function Dashboard() {
                     <Autocomplete
                         fullWidth
                         options={reOptions}
-                        getOptionLabel={(option) => option.name} // Display only the name in the dropdown
-                        value={reOptions.find(re => re.id === reId) || null} // Find the selected RE by its id
-                        onChange={(event, newValue) => setReId(newValue ? newValue.id : '')} // Store the RE id when selected
+                        getOptionLabel={(option) => option.name}
+                        value={reOptions.find(re => re.id === reId) || null}
+                        onChange={(event, newValue) => setReId(newValue ? newValue.id : '')}
                         renderInput={(params) => <TextField {...params} label="Requirement Engineer" variant="outlined" />}
                     />
                 </Grid>
@@ -152,14 +197,14 @@ export default function Dashboard() {
                     <Autocomplete
                         fullWidth
                         options={surveyOptions}
-                        getOptionLabel={(option) => option.name} // Display the survey name in the dropdown
-                        value={surveyOptions.find(survey => survey.id === surveyId) || null} // Find the selected survey by its id
-                        onChange={(event, newValue) => setSurveyId(newValue ? newValue.id : '')} // Store the survey id when selected
+                        getOptionLabel={(option) => option.name}
+                        value={surveyOptions.find(survey => survey.id === surveyId) || null}
+                        onChange={(event, newValue) => setSurveyId(newValue ? newValue.id : '')}
                         renderInput={(params) => <TextField {...params} label="Survey" variant="outlined" />}
                     />
                 </Grid>
 
-                {/* Answer Type Dropdown - Disabled until RE and Survey are selected */}
+                {/* Answer Type Dropdown */}
                 <Grid item xs={12} md={4}>
                     <FormControl fullWidth variant="outlined" disabled={!reId || !surveyId}>
                         <InputLabel>Answer Type</InputLabel>
@@ -171,23 +216,26 @@ export default function Dashboard() {
                             <MenuItem value="All">All</MenuItem>
                             <MenuItem value="DEV">Dev</MenuItem>
                             <MenuItem value="RE">RE</MenuItem>
-                            <MenuItem value="MANAGER>">Manager</MenuItem>
+                            <MenuItem value="MANAGER">Manager</MenuItem>
                         </Select>
                     </FormControl>
                 </Grid>
 
-                {/* Question Autocomplete - Disabled until RE and Survey are selected */}
+                {/* Question Category Dropdown */}
                 <Grid item xs={12} md={4}>
-                    <Autocomplete
-                        fullWidth
-                        options={questionOptions}
-                        getOptionLabel={(option) => option}
-                        value={questionId}
-                        onChange={(event, newValue) => setQuestionId(newValue || '')}
-                        renderInput={(params) => (
-                            <TextField {...params} label="Question" variant="outlined" disabled={!reId || !surveyId} />
-                        )}
-                    />
+                    <FormControl fullWidth variant="outlined" disabled={!reId || !surveyId}>
+                        <InputLabel>Category</InputLabel>
+                        <Select
+                            value={category}
+                            onChange={(event) => setCategory(event.target.value)}
+                            label="Category"
+                        >
+                            <MenuItem value="All">All</MenuItem>
+                            <MenuItem value="Communication">Communication</MenuItem>
+                            <MenuItem value="Responsiveness">Responsiveness</MenuItem>
+                            <MenuItem value="Collaboration">Collaboration</MenuItem>
+                        </Select>
+                    </FormControl>
                 </Grid>
 
                 {/* Submit Button */}
@@ -197,14 +245,18 @@ export default function Dashboard() {
                     </Button>
                 </Grid>
 
-                {/* Dashboard Layout */}
-                {/* Top Row - Full Width */}
+                {/* Overview Chart */}
                 <Grid item xs={12}>
                     <Paper elevation={3} style={{ padding: '16px' }}>
                         <Typography variant="h6" gutterBottom>
                             Overview Chart
                         </Typography>
-                        <div style={{ height: '200px', backgroundColor: '#e0e0e0', borderRadius: '4px' }}></div>
+                        {/* Display Bar chart here */}
+                        {graphData && (
+                            <div style={{ height: '400px' }}>
+                                <Bar data={chartData} options={chartOptions} />
+                            </div>
+                        )}
                     </Paper>
                 </Grid>
             </Grid>
