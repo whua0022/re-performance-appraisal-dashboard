@@ -32,7 +32,6 @@ export async function GET(req: NextRequest) {
         const searchParams = req.nextUrl.searchParams
         const creatorId = searchParams.get("creatorId") || ""
         const surveyId = searchParams.get("surveyId") || ""
-
         let surveys;
 
         if (surveyId != "") {
@@ -52,7 +51,6 @@ export async function GET(req: NextRequest) {
         return new Response("Error", {status: 500})
     }
 }
-
 
 
 const postNewSurvey = async (surveyDetails:any) => {

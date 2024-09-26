@@ -9,7 +9,6 @@ type AnswerQuestion = {
     answer: any
 }
 // POST /api/survey/send?role=something
-// Creates a survey
 export async function POST(req: NextRequest) {  
     try {
         const body = await req.json()
@@ -21,6 +20,7 @@ export async function POST(req: NextRequest) {
         let surveyToSend = {
             reviewerId: body.reviewerId,
             revieweeId: body.revieweeId,
+            surveyId: body.surveyId,
             answers: [] as Array<{ category: string; question: string; answer: any }>
         }
 
@@ -78,6 +78,7 @@ const postNewAnswerList = async (surveyToSend:any) => {
             reviewerId: surveyToSend.reviewerId,
             revieweeId: surveyToSend.revieweeId,
             answers: surveyToSend.answers,
+            surveyId: surveyToSend.surveyId,
             isCompleted: false
         },
     })

@@ -1,26 +1,34 @@
-// import { PrismaClient } from "@prisma/client";
+import { PrismaClient } from "@prisma/client";
+import { NextRequest } from "next/server";
 
-// const prisma = new PrismaClient()
+const prisma = new PrismaClient()
 
-// // POST /api/answers
-// // Create survey
-// export async function POST(req: Request) {
-//     try {
-//         const body = await req.json()
+// GET /api/answers?revieweeId=xx
+export async function GET(req: NextRequest) {
+    try {
+        const searchParams = req.nextUrl.searchParams
+        const revieweeId = searchParams.get("revieweeId") || ""
 
-//         const surveyDetails = {
-//             creatorId: body.creatorId,
-//             devQuestionList: body.devQuestionList,
-//             reQuestionList: body.reQuestionList,
-//             managerQuestionList: body.managerQuestionList
-//         }
+        let surveys = await getServerByRevieweeId(revieweeId)
 
-//         await postNewSurvey(surveyDetails)
+        return new Response(JSON.stringify(surveys), 
+            {
+                status: 200,
+                headers: {'Content-Type': 'application/json'}
+            }
+        )
+    } catch (err) {
+        console.error('Error: ', err)
+        return new Response("Error", {status: 500})
+    }
+}
 
-//         return new Response("Added new survey", {status: 200})
-//     } catch (err) {
-//         console.error('Error: ', err)
-//         return new Response("Error", {status: 500})
-//     }
-// }
-// }
+const getServerByRevieweeId = async (revieweeId: string) => {
+    const data = await prisma.answerList.findMany({
+        where: {
+            revieweeId: revieweeId,
+            isCompleted: true
+        }
+    })
+    return data
+}
