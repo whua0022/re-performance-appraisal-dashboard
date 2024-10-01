@@ -23,7 +23,7 @@ export async function GET(req: Request,
 }
 
 const getAllAnswers = async (answerId: string) => {
-    const answers = await prisma.answers.findMany(
+    const answers = await prisma.answerList.findMany(
         {
             where:{
                 id: answerId
