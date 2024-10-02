@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, QuestionCategory } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
@@ -9,9 +9,9 @@ type QuestionDetails = {
 
 // GET /api/questions
 // Retrieves all questions
-export async function GET(req: Request) {
+export async function GET() {
     try {
-        const questions = await getAllQuestions();
+        const questions = await getAllQuestions()
         return new Response(JSON.stringify(questions), {
             status: 200,
             headers: { 'Content-Type': 'application/json' }

@@ -76,7 +76,6 @@ export default function CreateSurvey() {
                     'Accept': "application/json"
                 }
             });
-
             if (!res.ok) {
                 throw new Error(`HTTP error! status: ${res.status}`);
             }

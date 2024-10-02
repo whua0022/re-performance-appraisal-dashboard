@@ -31,13 +31,14 @@ model Surveys {
 }
 
 model AnswerList {
-  id          String  @id @default(auto()) @map("_id") @db.ObjectId
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
   reviewerId  String
   revieweeId  String
   surveyId    String
   type        Role
   answers     Json[]
   isCompleted Boolean
+  createdAt   DateTime
 }
 
 model Teams {
@@ -57,4 +58,5 @@ enum QuestionCategory {
   Communication
   Time_Management
   Technical_Proficiency
+  PerformanceFeedback
 }

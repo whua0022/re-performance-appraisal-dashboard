@@ -32,3 +32,21 @@ const getServerByRevieweeId = async (revieweeId: string) => {
     })
     return data
 }
+
+// GET /api/answers?revieweeId=xx
+export async function POST  (req: NextRequest) {
+    console.log("DONE")
+    try {
+        await prisma.answerList.update({
+            where: { id: '66f4cfe08c8240f72f02915b' }, // Use the correct ID or condition to target the document
+            data: {
+                createdAt: new Date('2024-10-30T00:00:00Z'), // Set the createdAt field if it doesn't exist
+            },
+        });
+
+        return new Response("Done", { status: 200 });
+    } catch (error) {
+        console.error('Error updating document:', error);
+        return new Response("Failed to update", { status: 500 });
+    }
+}
