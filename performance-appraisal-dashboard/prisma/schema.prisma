@@ -4,7 +4,7 @@ generator client {
 
 datasource db {
   provider = "mongodb"
-  url      = env("DATABASE_URL")
+  url      = env("MONGODB_URI")
 }
 
 model Users {
@@ -16,9 +16,11 @@ model Users {
 }
 
 model Questions {
-  id       String           @id @default(auto()) @map("_id") @db.ObjectId
-  question String
-  category QuestionCategory
+  id               String           @id @default(auto()) @map("_id") @db.ObjectId
+  question         String
+  category         QuestionCategory
+  isOpenEnded      Boolean
+  followUpQuestion Boolean
 }
 
 model Surveys {

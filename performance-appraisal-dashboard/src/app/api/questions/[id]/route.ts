@@ -6,6 +6,8 @@ const prisma = new PrismaClient();
 type QuestionDetails = {
     question: string;
     category: string;
+    isOpenEnded: boolean;
+    followUpQuestion: boolean;
 };
 
 // GET /api/questions/:id
@@ -42,7 +44,9 @@ export async function PUT(req: Request) {
 
         const updatedQuestion: QuestionDetails = {
             question: body.question,
-            category: body.category
+            category: body.category,
+            isOpenEnded: body.isOpenEnded,
+            followUpQuestion: body.followUpQuestion
         };
 
         await updateQuestion(id, updatedQuestion);
