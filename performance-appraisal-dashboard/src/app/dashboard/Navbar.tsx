@@ -8,8 +8,11 @@ export default function Navbar() {
         <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
           Requirement Engineer Performance Appraisal Tool
         </Typography>
-        <Button color="inherit" component={Link} href="/dashboard">
-          Home
+        <Button color="inherit" component={Link} href="/dashboard/team">
+          Team View
+        </Button>
+        <Button color="inherit" component={Link} href="/dashboard/individual">
+          Detailed View
         </Button>
         <Button color="inherit" component={Link} href="/dashboard/create-survey">
           Create survey

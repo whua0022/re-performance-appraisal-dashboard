@@ -1,4 +1,4 @@
-import { PrismaClient, Questions} from '@prisma/client'
+import { PrismaClient, Questions, Role} from '@prisma/client'
 import { NextRequest } from 'next/server'
 
 const prisma = new PrismaClient()
@@ -6,7 +6,9 @@ const prisma = new PrismaClient()
 type AnswerQuestion = {
     category: string,
     question: string,
-    answer: any
+    answer: any,
+    isOpenEnded: boolean,
+    followUpQuestion: boolean
 }
 // POST /api/survey/send?role=something
 export async function POST(req: NextRequest) {  
@@ -21,31 +23,40 @@ export async function POST(req: NextRequest) {
             reviewerId: body.reviewerId,
             revieweeId: body.revieweeId,
             surveyId: body.surveyId,
-            answers: [] as Array<{ category: string; question: string; answer: any }>
+            answers: [] as Array<{ category: string; question: string; answer: any, isOpenEnded: boolean, followUpQuestion: boolean }>,
+            type: ""
         }
-
         if (role == "DEV") {
             (questions?.devQuestionList as AnswerQuestion[])?.forEach((question) => {
+                surveyToSend.type = Role.DEV
                 surveyToSend.answers.push({
                   category: question.category,
                   question: question.question,
                   answer: null,
+                  isOpenEnded: question.isOpenEnded,
+                  followUpQuestion: question.followUpQuestion
                 });
             });
         } else if (role == "RE") {
             (questions?.reQuestionList as AnswerQuestion[])?.forEach((question) => {
+                surveyToSend.type = Role.RE
                 surveyToSend.answers.push({
                   category: question.category,
                   question: question.question,
                   answer: null,
+                  isOpenEnded: question.isOpenEnded,
+                  followUpQuestion: question.followUpQuestion
                 });
             });
         } else if (role == "MANAGER") {
             (questions?.managerQuestionList as AnswerQuestion[])?.forEach((question) => {
+                surveyToSend.type = Role.MANAGER
                 surveyToSend.answers.push({
                   category: question.category,
                   question: question.question,
                   answer: null,
+                  isOpenEnded: question.isOpenEnded,
+                  followUpQuestion: question.followUpQuestion
                 });
             });
         } else {
@@ -79,7 +90,9 @@ const postNewAnswerList = async (surveyToSend:any) => {
             revieweeId: surveyToSend.revieweeId,
             answers: surveyToSend.answers,
             surveyId: surveyToSend.surveyId,
-            isCompleted: false
+            isCompleted: false,
+            type: surveyToSend.type,
+            createdAt: new Date()
         },
     })
 }

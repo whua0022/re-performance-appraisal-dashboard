@@ -15,6 +15,7 @@ import TableRow from '@mui/material/TableRow';
 import Paper from '@mui/material/Paper';
 import { useEffect, useState } from 'react';
 import { Questions } from '@prisma/client';
+import { useRouter } from 'next/navigation';
 
 export default function CreateSurvey() {
     const roles = ["Developers", "Requirement Engineer", "Managers"];
@@ -25,11 +26,10 @@ export default function CreateSurvey() {
     const [questionList, setQuestionList] = useState<Questions[]>([]);
     const [currRoleQuestionSelection, setCurrRoleQuestionSelection] = useState(0);
     const [surveyName, setSurveyName] = useState('');
-
+    const router = useRouter()
     useEffect(() => {
        fetchQuestions();
     }, []);
-
     const handleQuestionSelect = (question: Questions, isChecked: boolean) => {
         if (roles[currRoleQuestionSelection] === "Developers")  {
             setDevQuestions(prev => {
@@ -57,7 +57,7 @@ export default function CreateSurvey() {
             setCheckedQuestions({});
         } else {
             let survey = {
-                creatorId: "1",
+                creatorId: "66ea71380a379e73dffb6783",
                 surveyName: surveyName,
                 devQuestionList: devQuestions,
                 reQuestionList: reQuestions,
@@ -65,6 +65,8 @@ export default function CreateSurvey() {
             };
             createSurvey(survey);
             console.log("Done");
+            
+            router.push("/dashboard")
         }
     };
 

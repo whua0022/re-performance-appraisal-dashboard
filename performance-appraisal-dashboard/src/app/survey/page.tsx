@@ -1,289 +1,127 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import {
-  Container,
-  Typography,
-  Box,
-  CircularProgress,
-  FormControl,
-  FormControlLabel,
-  Radio,
-  RadioGroup,
-  Button,
-  Snackbar,
-  Alert,
-  TextField,
-} from '@mui/material';
+import { Card, CardContent, Typography, Grid, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Button } from '@mui/material';
+import { useRouter } from 'next/navigation';
 
-type Question = {
-  id: string;
-  question: string;
-  category: string;
-  isOpenEnded: boolean; 
-  followUpQuestion?: boolean;
-};
-
-type Answer = {
-  [key: string]: number | string; 
-};
-
-export default function SurveyPage() {
-  const [questions, setQuestions] = useState<Question[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [answers, setAnswers] = useState<Answer>({});
-  const [currentCategoryIndex, setCurrentCategoryIndex] = useState(0);
-  const [submissionStatus, setSubmissionStatus] = useState<{ success: boolean; message: string } | null>(null);
-  const [showFollowUp, setShowFollowUp] = useState<{ [key: string]: boolean }>({}); 
-  const [followUpAnswers, setFollowUpAnswers] = useState<{ [key: string]: string }>({});
+export default function Survey() {
+  const [surveys, setSurveys] = useState([]);
+  const [surveyNames, setSurveyNames] = useState({}); // Store survey names
+  const [selectedSurvey, setSelectedSurvey] = useState(null); // Track selected survey
+  const [open, setOpen] = useState(false); // Track modal open/close state
+  const router = useRouter(); // Next.js router hook
 
   useEffect(() => {
-    async function fetchQuestions() {
-      try {
-        const response = await fetch('/api/questions');
-        if (!response.ok) {
-          throw new Error('Failed to fetch questions');
-        }
-        const data: Question[] = await response.json();
-  
-        const filteredQuestions = data.filter(question => !question.followUpQuestion);
-  
-        setQuestions(filteredQuestions); 
-        const initialAnswers = filteredQuestions.reduce((acc: Answer, question: Question) => {
-          acc[question.id] = question.isOpenEnded ? '' : 0; 
-          return acc;
-        }, {});
-        setAnswers(initialAnswers);
-      } catch (err) {
-        setError('Failed to fetch questions');
-        console.error('Fetch error:', err);
-      } finally {
-        setLoading(false);
-      }
-    }
-  
-    fetchQuestions();
+    fetchSurveyAvailable();
   }, []);
-  
 
-  const groupedQuestions = questions.reduce((acc: Record<string, Question[]>, question) => {
-    if (!acc[question.category]) {
-      acc[question.category] = [];
-    }
-    acc[question.category].push(question);
-    return acc;
-  }, {});
+  // Function to fetch available surveys
+  const fetchSurveyAvailable = async () => {
+    try {
+      const res = await fetch("/api/answers?reviewerId=66ea71380a379e73dffb6783");
+      const data = await res.json();
 
-  const categories = Object.keys(groupedQuestions);
-  const currentCategory = categories[currentCategoryIndex];
-  const questionsInCategory = groupedQuestions[currentCategory] || [];
+      setSurveys(data); // Store the fetched surveys
 
-  const handleAnswerChange = (questionId: string, value: number | string) => {
-    setAnswers((prev) => ({ ...prev, [questionId]: value }));
+      const surveyNamesMap = {};
+      
+      // Fetch survey names sequentially using for...of loop
+      for (const survey of data) {
+        const name = await fetchSurveyName(survey.surveyId);
+        surveyNamesMap[survey.surveyId] = name;
+      }
 
-    if (questionId === '66e037579b35f841a38f258d' || questionId === '66e0392a9b35f841a38f258e') {
-      setShowFollowUp((prev) => ({
-        ...prev,
-        [questionId]: value === 1 || value === 2,
-      }));
-    }
-    if (questionId !== '66e037579b35f841a38f258d' && questionId !== '66e0392a9b35f841a38f258e') {
-      setFollowUpAnswers((prev) => ({ ...prev, [questionId]: '' }));
+      setSurveyNames(surveyNamesMap); // Set the survey names
+    } catch (err) {
+      console.log(err);
     }
   };
 
-  const handleSubmit = async () => {
+  // Function to fetch survey name by surveyId
+  const fetchSurveyName = async (surveyId) => {
     try {
-      const response = await fetch('/api/answers', {
-        method: 'POST',
+      const res = await fetch(`/api/survey?surveyId=${surveyId}`, {
+        method: 'GET',
         headers: {
-          'Content-Type': 'application/json',
+          Accept: 'application/json',
         },
-        body: JSON.stringify({
-          reviewerId: 'sampleReviewerId',
-          revieweeId: 'sampleRevieweeId',
-          surveyId: 'sampleSurveyId',
-          answers: Object.entries(answers).map(([questionId, answer]) => ({
-            questionId,
-            answer,
-          })),
-          followUpAnswers, // Include follow-up answers in the submission
-        }),
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to submit answers');
+      if (!res.ok) {
+        throw new Error(
+          `Failed to fetch survey name for surveyId: ${surveyId}, status: ${res.status}`
+        );
       }
-      setSubmissionStatus({ success: true, message: 'Answers submitted successfully!' });
+
+      const data = await res.json();
+      return data.name;
     } catch (error) {
-      console.error('Error submitting answers:', error);
-      setSubmissionStatus({ success: false, message: 'Failed to submit answers' });
+      console.error('Error fetching survey name: ', error);
+      return null;
     }
   };
 
-  const handleNextCategory = () => {
-    if (currentCategoryIndex < categories.length - 1) {
-      setCurrentCategoryIndex(currentCategoryIndex + 1);
-    }
+  // Handle card click to open modal
+  const handleCardClick = (surveyId) => {
+    setSelectedSurvey(surveyId); // Set the selected surveyId
+    setOpen(true); // Open the modal
   };
 
-  const handlePreviousCategory = () => {
-    if (currentCategoryIndex > 0) {
-      setCurrentCategoryIndex(currentCategoryIndex - 1);
-    }
+  // Handle modal close
+  const handleClose = () => {
+    setOpen(false);
   };
 
-  if (loading) return <Box display="flex" justifyContent="center" alignItems="center" mt={4}><CircularProgress /></Box>;
-  if (error) return <Typography color="error">{error}</Typography>;
+  // Handle modal "Yes" click to route to the survey page
+  const handleConfirm = () => {
+    router.push(`/survey/${selectedSurvey}?reviewerId=66ea71380a379e73dffb6783`);
+  };
 
   return (
-    <Container maxWidth="md" sx={{ mt: 8 }}>
-      <Box textAlign="center" mb={4}>
-        <Typography variant="h4" component="h1" fontWeight="bold" gutterBottom>
-          Survey
-        </Typography>
-      </Box>
-
-      <Box mb={4}>
-        <Typography variant="h5" component="h2" fontWeight="bold" gutterBottom>
-          {currentCategory}
-        </Typography>
-      </Box>
-
-      <Box>
-        {questionsInCategory.length === 0 ? (
-          <Typography>No questions available in this category.</Typography>
-        ) : (
-          <Box mb={4}>
-            {questionsInCategory.map((question) => (
-              <Box key={question.id} mb={2}>
-                <Typography variant="h6" component="h3" fontWeight="bold" gutterBottom>
-                  {question.question}
+    <main className="p-6">
+      <Typography variant="h4" className="mb-4 text-center">Available Surveys</Typography>
+      <Grid container spacing={4}>
+        {surveys.map((survey) => (
+          <Grid item key={survey.id} xs={12} sm={6} md={4}>
+            <Card className="bg-white shadow" onClick={() => handleCardClick(survey.surveyId)} style={{ cursor: 'pointer' }}>
+              <CardContent>
+                <Typography variant="h6" component="div">
+                  {surveyNames[survey.surveyId] || 'Loading...'} {/* Show the survey name or 'Loading...' */}
                 </Typography>
-                {question.isOpenEnded ? (
-                  <TextField
-                    label="Your Answer"
-                    variant="outlined"
-                    multiline
-                    rows={4}
-                    fullWidth
-                    value={answers[question.id] || ''}
-                    onChange={(e) => handleAnswerChange(question.id, e.target.value)}
-                  />
-                ) : (
-                  <FormControl component="fieldset">
-                    <RadioGroup
-                      value={answers[question.id] || ''}
-                      onChange={(e) => handleAnswerChange(question.id, parseInt(e.target.value))}
-                      row
-                      sx={{ display: 'flex', justifyContent: 'center' }}
-                    >
-                      <FormControlLabel
-                        value={1}
-                        control={<Radio />}
-                        label="Needs Improvement"
-                        sx={{ margin: '0 8px' }}
-                      />
-                      <FormControlLabel
-                        value={2}
-                        control={<Radio />}
-                        label="Below Expectations"
-                        sx={{ margin: '0 8px' }}
-                      />
-                      <FormControlLabel
-                        value={3}
-                        control={<Radio />}
-                        label="Meets Expectations"
-                        sx={{ margin: '0 8px' }}
-                      />
-                      <FormControlLabel
-                        value={4}
-                        control={<Radio />}
-                        label="Exceeds Expectations"
-                        sx={{ margin: '0 8px' }}
-                      />
-                      <FormControlLabel
-                        value={5}
-                        control={<Radio />}
-                        label="Excellent"
-                        sx={{ margin: '0 8px' }}
-                      />
-                    </RadioGroup>
-                  </FormControl>
-                )}
+                <Typography variant="body2" color="text.secondary">
+                  Type: {survey.type}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Created At: {new Date(survey.createdAt).toLocaleDateString()}
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+        ))}
+      </Grid>
 
-                {['66e037579b35f841a38f258d', '66e0392a9b35f841a38f258e'].includes(question.id) &&
-                  showFollowUp[question.id] && (
-                    <Box mt={2}>
-                      <Typography variant="h6" component="h3" fontWeight="bold" gutterBottom>
-                        {question.question}
-                      </Typography>
-                      <TextField
-                        label="Your Answer"
-                        variant="outlined"
-                        multiline
-                        rows={4}
-                        fullWidth
-                        value={followUpAnswers[question.id] || ''}
-                        onChange={(e) =>
-                          setFollowUpAnswers((prev) => ({
-                            ...prev,
-                            [question.id]: e.target.value,
-                          }))
-                        }
-                      />
-                    </Box>
-                  )}
-              </Box>
-            ))}
-          </Box>
-        )}
-      </Box>
-
-      <Box display="flex" justifyContent="space-between" mb={4}>
-        <Button
-          variant="contained"
-          color="primary"
-          onClick={handlePreviousCategory}
-          disabled={currentCategoryIndex === 0}
-        >
-          Previous
-        </Button>
-        {currentCategoryIndex === categories.length - 1 ? (
-          <Button
-            variant="contained"
-            color="primary"
-            onClick={handleSubmit}
-          >
-            Submit
+      {/* Modal */}
+      <Dialog
+        open={open}
+        onClose={handleClose}
+        aria-labelledby="alert-dialog-title"
+        aria-describedby="alert-dialog-description"
+      >
+        <DialogTitle id="alert-dialog-title">{"Start Survey"}</DialogTitle>
+        <DialogContent>
+          <DialogContentText id="alert-dialog-description">
+            Do you want to start the survey?
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleClose} color="primary">
+            No
           </Button>
-        ) : (
-          <Button
-            variant="contained"
-            color="primary"
-            onClick={handleNextCategory}
-          >
-            Next
+          <Button onClick={handleConfirm} color="primary" autoFocus>
+            Yes
           </Button>
-        )}
-      </Box>
-
-      {submissionStatus && (
-        <Snackbar
-          open={Boolean(submissionStatus)}
-          autoHideDuration={6000}
-          onClose={() => setSubmissionStatus(null)}
-        >
-          <Alert
-            onClose={() => setSubmissionStatus(null)}
-            severity={submissionStatus.success ? 'success' : 'error'}
-            sx={{ width: '100%' }}
-          >
-            {submissionStatus.message}
-          </Alert>
-        </Snackbar>
-      )}
-    </Container>
+        </DialogActions>
+      </Dialog>
+    </main>
   );
 }
