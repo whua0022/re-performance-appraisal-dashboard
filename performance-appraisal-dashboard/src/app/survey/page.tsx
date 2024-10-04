@@ -15,12 +15,12 @@ export default function Survey() {
     fetchSurveyAvailable();
   }, []);
 
+  let reviewerIdTemp = "66ea71380a379e73dffb6783"
   // Function to fetch available surveys
   const fetchSurveyAvailable = async () => {
     try {
-      const res = await fetch("/api/answers?reviewerId=66ea71380a379e73dffb6783");
+      const res = await fetch("/api/answers?reviewerId=" + reviewerIdTemp +"&isComplete=false");
       const data = await res.json();
-
       setSurveys(data); // Store the fetched surveys
 
       const surveyNamesMap = {};
@@ -74,7 +74,7 @@ export default function Survey() {
 
   // Handle modal "Yes" click to route to the survey page
   const handleConfirm = () => {
-    router.push(`/survey/${selectedSurvey}?reviewerId=66ea71380a379e73dffb6783`);
+    router.push(`/survey/${selectedSurvey}?reviewerId=${reviewerIdTemp}`);
   };
 
   return (

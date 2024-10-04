@@ -45,14 +45,23 @@ export async function GET(req: NextRequest) {
         const revieweeId = searchParams.get("revieweeId") || ""
         const reviewerId = searchParams.get("reviewerId") || ""
         const surveyId = searchParams.get("surveyId") || ""
+        const isComplete = searchParams.get("isComplete") || ""
         let surveys;
 
         if (reviewerId != "") {
-            surveys = await getSurveyByReviewerId(reviewerId)
+            if (isComplete === "false") {
+                surveys = await getSurveyByReviewerIdIncomplete(reviewerId)
+            } else {
+                surveys = await getSurveyByReviewerId(reviewerId)
+            }     
         } else if (revieweeId != "") {
             surveys = await getSurveyByRevieweeId(revieweeId)
         } else if (surveyId != "") {
-            surveys = await getSurveyBySurveyId(surveyId)
+            if (isComplete === "false") {
+                surveys = await getSurveyBySurveyIdIncomplete(surveyId)
+            } else {
+                surveys = await getSurveyBySurveyId(surveyId)
+            }
         }
 
         return new Response(JSON.stringify(surveys), 
@@ -118,6 +127,16 @@ const getSurveyByReviewerId = async (reviewerId: string) => {
     return data
 }
 
+const getSurveyByReviewerIdIncomplete = async (reviewerId: string) => {
+    const data = await prisma.answerList.findMany({
+        where: {
+            reviewerId: reviewerId,
+            isCompleted: false
+        }
+    })
+    return data
+}
+
 const getSurveyByRevieweeId = async (revieweeId: string) => {
     const data = await prisma.answerList.findMany({
         where: {
@@ -133,6 +152,16 @@ const getSurveyBySurveyId = async (surveyId: string) => {
         where: {
             surveyId: surveyId,
             isCompleted: true
+        }
+    })
+    return data
+}
+
+const getSurveyBySurveyIdIncomplete = async (surveyId: string) => {
+    const data = await prisma.answerList.findMany({
+        where: {
+            surveyId: surveyId,
+            isCompleted: false
         }
     })
     return data

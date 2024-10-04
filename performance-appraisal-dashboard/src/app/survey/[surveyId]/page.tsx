@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Container,
   Typography,
@@ -25,11 +25,12 @@ type Question = {
 };
 
 type Answer = {
-  [key: string]: number | string; // Now the key will be the question text itself
+  [key: string]: number | string;
 };
 
 export default function SurveyAnswerPage({ params }: { params: { surveyId: string } }) {
   const [questions, setQuestions] = useState<Question[]>([]);
+  const [survey, setSurvey] = useState<any>(null); // Change to state
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [answers, setAnswers] = useState<Answer>({});
@@ -38,26 +39,32 @@ export default function SurveyAnswerPage({ params }: { params: { surveyId: strin
   const [showFollowUp, setShowFollowUp] = useState<{ [key: string]: boolean }>({});
   const [followUpAnswers, setFollowUpAnswers] = useState<{ [key: string]: string }>({});
   const searchParams = useSearchParams();
-  const survey = useRef(null);
-
   const router = useRouter();
 
   useEffect(() => {
     async function fetchQuestions() {
       try {
-        const res = await fetch(`/api/answers?surveyId=${params.surveyId}`);
+        const res = await fetch(`/api/answers?surveyId=${params.surveyId}&isComplete=false`);
         const data = await res.json();
+        
         // Filter out the surveys for the given reviewerId
-        survey.current = data.filter((survey: any) => survey.reviewerId === searchParams.get('reviewerId'))[0];
-        const filteredQuestions = survey.current.answers.filter((question: any) => !question.followUpQuestion);
-        setQuestions(filteredQuestions);
+        const selectedSurvey = data.find((survey: any) => survey.reviewerId === searchParams.get('reviewerId'));
+        
+        if (selectedSurvey) {
+          setSurvey(selectedSurvey);
+          console.log(selectedSurvey)
+          const filteredQuestions = selectedSurvey.answers.filter((question: any) => !question.followUpQuestion);
+          setQuestions(filteredQuestions);
+          
+          const initialAnswers = filteredQuestions.reduce((acc: Answer, question: Question) => {
+            acc[question.question] = question.isOpenEnded ? '' : 0;
+            return acc;
+          }, {});
 
-        const initialAnswers = filteredQuestions.reduce((acc: Answer, question: Question) => {
-          acc[question.question] = question.isOpenEnded ? '' : 0; // Use question text as the key
-          return acc;
-        }, {});
-
-        setAnswers(initialAnswers);
+          setAnswers(initialAnswers);
+        } else {
+          setError('No survey found for this reviewer.');
+        }
       } catch (err) {
         setError('Failed to fetch questions');
         console.error('Fetch error:', err);
@@ -79,6 +86,7 @@ export default function SurveyAnswerPage({ params }: { params: { surveyId: strin
 
   const categories = Object.keys(groupedQuestions);
   const currentCategory = categories[currentCategoryIndex];
+  console.log(groupedQuestions)
   const questionsInCategory = groupedQuestions[currentCategory] || [];
 
   const handleAnswerChange = (question: string, value: number | string) => {
@@ -86,30 +94,31 @@ export default function SurveyAnswerPage({ params }: { params: { surveyId: strin
   };
 
   const handleSubmit = async () => {
+    if (!survey) return; // Ensure survey is loaded
+
     const answerList = Object.entries(answers).map(([question, answer]) => {
-      // Find the corresponding question to get `isOpenEnded`
       const matchedQuestion = questions.find((q) => q.question === question);
       const isOpenEnded = matchedQuestion ? matchedQuestion.isOpenEnded : false;
-      const category = matchedQuestion?.category
+      const category = matchedQuestion?.category;
       return {
-        question,  // The question text
-        answer,    // The user's answer
+        question,
+        answer,
         isOpenEnded,
-        category
+        category,
       };
     });
 
     const newVal = {
       reviewerId: searchParams.get('reviewerId'),
-      revieweeId: survey.current.revieweeId,
+      revieweeId: survey.revieweeId,
       surveyId: params.surveyId,
-      answers: answerList, // Use the updated answer list
+      answers: answerList,
       followUpAnswers,
     };
 
-    survey.current = {
-      ...survey.current,
-      ...newVal
+    const updatedSurvey = {
+      ...survey,
+      ...newVal,
     };
 
     try {
@@ -119,14 +128,15 @@ export default function SurveyAnswerPage({ params }: { params: { surveyId: strin
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          answerListId: survey.current.id,
-          answers: survey.current.answers
+          answerListId: updatedSurvey.id,
+          answers: updatedSurvey.answers,
         }),
       });
 
       if (!response.ok) {
         throw new Error('Failed to submit answers');
       }
+
       setSubmissionStatus({ success: true, message: 'Answers submitted successfully!' });
       router.push("/survey");
     } catch (error) {
@@ -224,29 +234,6 @@ export default function SurveyAnswerPage({ params }: { params: { surveyId: strin
                     </RadioGroup>
                   </FormControl>
                 )}
-
-                {/* Handle follow-up questions */}
-                {showFollowUp[question.question] && (
-                  <Box mt={2}>
-                    <Typography variant="h6" component="h3" fontWeight="bold" gutterBottom>
-                      Follow-up Question:
-                    </Typography>
-                    <TextField
-                      label="Your Answer"
-                      variant="outlined"
-                      multiline
-                      rows={4}
-                      fullWidth
-                      value={followUpAnswers[question.question] || ''}
-                      onChange={(e) =>
-                        setFollowUpAnswers((prev) => ({
-                          ...prev,
-                          [question.question]: e.target.value,
-                        }))
-                      }
-                    />
-                  </Box>
-                )}
               </Box>
             ))}
           </Box>
@@ -263,19 +250,11 @@ export default function SurveyAnswerPage({ params }: { params: { surveyId: strin
           Previous
         </Button>
         {currentCategoryIndex === categories.length - 1 ? (
-          <Button
-            variant="contained"
-            color="primary"
-            onClick={handleSubmit}
-          >
+          <Button variant="contained" color="primary" onClick={handleSubmit}>
             Submit
           </Button>
         ) : (
-          <Button
-            variant="contained"
-            color="primary"
-            onClick={handleNextCategory}
-          >
+          <Button variant="contained" color="primary" onClick={handleNextCategory}>
             Next
           </Button>
         )}

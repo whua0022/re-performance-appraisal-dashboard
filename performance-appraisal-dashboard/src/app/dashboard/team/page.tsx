@@ -43,13 +43,11 @@ export default function DashboardTeamView() {
   const [reOptions, setReOptions] = useState([]);
   const [surveyOptions, setSurveyOptions] = useState([]);
   const [graphData, setGraphData] = useState([]);
-  const [allQuestions, setAllQuestions] = useState([]);
+  const [numericalQuestions, setNumericalQuestions] = useState([]);
   const [selectedQuestion, setSelectedQuestion] = useState('');
   const [answersMap, setAnswersMap] = useState({});
-  const [questionAnswers, setQuestionAnswers] = useState([]);
   const [overTimeData, setOverTimeData] = useState([]);
   const [activeTab, setActiveTab] = useState(0);
-  const [teamMembers, setTeamMembers] = useState([]);
   const [openEndedQuestions, setOpenEndedQuestions] = useState([]);
 
   useEffect(() => {
@@ -122,7 +120,8 @@ export default function DashboardTeamView() {
       const result = await res.json();
       const surveyIds = [];
       const surveyOptions = [];
-      const openEndedQs = []; // To track open-ended questions
+      const openEndedQs = [];
+      const numericalQsSet = new Set();
 
       for (const item of result) {
         if (!surveyIds.includes(item.surveyId)) {
@@ -136,7 +135,7 @@ export default function DashboardTeamView() {
       }
       setSurveyOptions(surveyOptions);
 
-      if (surveyId !== 'All') {
+      if (surveyId !== '') {
         const filteredSurveys = result.filter(
           (survey) =>
             survey.surveyId === surveyId && survey.type === answerType
@@ -144,33 +143,35 @@ export default function DashboardTeamView() {
 
         if (filteredSurveys.length > 0) {
           const questionMap = {};
-          const questionSet = new Map();
           const answersMapTemp = {};
 
           filteredSurveys.forEach((surveyItem) => {
             surveyItem.answers.forEach((q) => {
-              if (q.isOpenEnded) {
-                openEndedQs.push({
-                  question: q.question,
-                  answers: surveyItem.answers
-                    .filter((a) => a.isOpenEnded && a.question === q.question)
-                    .map((a) => a.answer),
-                });
-              } else {
-                if (category === 'All' || q.category === category) {
+              if (category === 'All' || q.category === category) {
+                if (q.isOpenEnded) {
+                  // Collect open-ended questions
+                  const existingQuestion = openEndedQs.find(
+                    (item) => item.question === q.question
+                  );
+                  if (existingQuestion) {
+                    existingQuestion.answers.push(q.answer);
+                  } else {
+                    openEndedQs.push({
+                      question: q.question,
+                      answers: [q.answer],
+                    });
+                  }
+                } else {
+                  // Collect numerical questions
+                  numericalQsSet.add(q.question);
+
+                  // Prepare data for the overview chart
                   if (!questionMap[q.question]) {
                     questionMap[q.question] = { total: 0, count: 0 };
                   }
                   questionMap[q.question].total += parseInt(q.answer);
                   questionMap[q.question].count += 1;
 
-                  if (!questionSet.has(q.question)) {
-                    questionSet.set(q.question, {
-                      question: q.question,
-                      isOpenEnded: q.isOpenEnded,
-                      category: q.category,
-                    });
-                  }
                   if (!answersMapTemp[q.question]) {
                     answersMapTemp[q.question] = [];
                   }
@@ -183,19 +184,58 @@ export default function DashboardTeamView() {
             });
           });
 
-          const answersForGraph = Object.keys(questionMap).map((question) => ({
-            question: question,
-            answer: questionMap[question].total / questionMap[question].count,
-          }));
+          const answersForGraph = Object.keys(questionMap).map(
+            (question) => ({
+              question: question,
+              answer:
+                questionMap[question].total / questionMap[question].count,
+            })
+          );
           setGraphData(answersForGraph);
 
-          setAllQuestions(Array.from(questionSet.values()));
           setAnswersMap(answersMapTemp);
-          setOpenEndedQuestions(openEndedQs); // Set the open-ended questions data
+          setOpenEndedQuestions(openEndedQs);
+          setNumericalQuestions(Array.from(numericalQsSet));
         }
       }
     } catch (error) {
       console.error('Error fetching surveys: ', error);
+    }
+  };
+
+  const handleTabChange = (event, newValue) => {
+    setActiveTab(newValue);
+  };
+
+  const handleQuestionChange = (event, newValue) => {
+    setSelectedQuestion(newValue || '');
+
+    if (newValue && answersMap[newValue]) {
+      const filteredOverTimeData = answersMap[newValue].map((answer) => ({
+        date: new Date(answer.createdAt).toLocaleDateString(),
+        score: parseFloat(answer.answer),
+      }));
+
+      const overTimeDataTemp = filteredOverTimeData.reduce((acc, curr) => {
+        if (!acc[curr.date]) {
+          acc[curr.date] = [];
+        }
+        acc[curr.date].push(curr.score);
+        return acc;
+      }, {});
+
+      const formattedOverTimeData = Object.keys(overTimeDataTemp).map(
+        (date) => ({
+          date,
+          average:
+            overTimeDataTemp[date].reduce((a, b) => a + b, 0) /
+            overTimeDataTemp[date].length,
+        })
+      );
+
+      setOverTimeData(formattedOverTimeData);
+    } else {
+      setOverTimeData([]);
     }
   };
 
@@ -212,6 +252,21 @@ export default function DashboardTeamView() {
     ],
   };
 
+  const overTimeChartData = overTimeData.length > 0
+    ? {
+        labels: overTimeData.map((d) => d.date),
+        datasets: [
+          {
+            label: `Average Score for "${selectedQuestion}" Over Time`,
+            data: overTimeData.map((d) => d.average),
+            fill: false,
+            borderColor: 'rgba(75,192,192,1)',
+            tension: 0.1,
+          },
+        ],
+      }
+    : null;
+
   const chartOptions = {
     indexAxis: 'y',
     responsive: true,
@@ -222,7 +277,6 @@ export default function DashboardTeamView() {
         stepSize: 1,
         ticks: {
           callback: function (value) {
-            // Map numerical values to their corresponding string labels
             const labelsMap = {
               1: 'Needs Improvement',
               2: 'Below Expectations',
@@ -230,7 +284,7 @@ export default function DashboardTeamView() {
               4: 'Exceeds Expectations',
               5: 'Excellent',
             };
-            return labelsMap[value] || value; // Return the mapped label or the value if not found
+            return labelsMap[value] || value;
           },
         },
       },
@@ -242,8 +296,27 @@ export default function DashboardTeamView() {
     },
   };
 
-  const handleTabChange = (event, newValue) => {
-    setActiveTab(newValue);
+  const lineChartOptions = {
+    responsive: true,
+    scales: {
+      y: {
+        beginAtZero: true,
+        max: 5,
+        ticks: {
+          stepSize: 1,
+          callback: function (value) {
+            const labelsMap = {
+              1: 'Needs Improvement',
+              2: 'Below Expectations',
+              3: 'Meets Expectations',
+              4: 'Exceeds Expectations',
+              5: 'Excellent',
+            };
+            return labelsMap[value] || value;
+          },
+        },
+      },
+    },
   };
 
   return (
@@ -261,7 +334,11 @@ export default function DashboardTeamView() {
             value={reOptions.find((re) => re.id === reId) || null}
             onChange={(event, newValue) => setReId(newValue ? newValue.id : '')}
             renderInput={(params) => (
-              <TextField {...params} label="Requirement Engineer" variant="outlined" />
+              <TextField
+                {...params}
+                label="Requirement Engineer"
+                variant="outlined"
+              />
             )}
           />
         </div>
@@ -271,8 +348,12 @@ export default function DashboardTeamView() {
             fullWidth
             options={surveyOptions}
             getOptionLabel={(option) => option.name}
-            value={surveyOptions.find((survey) => survey.id === surveyId) || null}
-            onChange={(event, newValue) => setSurveyId(newValue ? newValue.id : '')}
+            value={
+              surveyOptions.find((survey) => survey.id === surveyId) || null
+            }
+            onChange={(event, newValue) =>
+              setSurveyId(newValue ? newValue.id : '')
+            }
             renderInput={(params) => (
               <TextField {...params} label="Survey" variant="outlined" />
             )}
@@ -312,9 +393,13 @@ export default function DashboardTeamView() {
             >
               <MenuItem value="All">All</MenuItem>
               <MenuItem value="Communication">Communication</MenuItem>
-              <MenuItem value="User_Story_Quality">User Story Quality</MenuItem>
+              <MenuItem value="User_Story_Quality">
+                User Story Quality
+              </MenuItem>
               <MenuItem value="Time_Management">Time Management</MenuItem>
-              <MenuItem value="Technical_Proficiency">Technical Proficiency</MenuItem>
+              <MenuItem value="Technical_Proficiency">
+                Technical Proficiency
+              </MenuItem>
             </Select>
           </FormControl>
         </div>
@@ -329,6 +414,7 @@ export default function DashboardTeamView() {
       >
         <Tab label="Overview Chart" />
         <Tab label="Open-ended Questions" />
+        <Tab label="Detailed View" />
       </Tabs>
 
       {activeTab === 0 && (
@@ -337,10 +423,12 @@ export default function DashboardTeamView() {
             <Typography variant="h6" className="mb-4">
               Overview Chart
             </Typography>
-            {graphData && (
+            {graphData.length > 0 ? (
               <div className="h-[600px] w-full">
                 <Bar data={chartData} options={chartOptions} />
               </div>
+            ) : (
+              <Typography>No data available for the overview chart.</Typography>
             )}
           </div>
         </div>
@@ -353,11 +441,11 @@ export default function DashboardTeamView() {
               openEndedQuestions.map((item, index) => (
                 <div key={index} className="mb-6 grid grid-cols-1 gap-4">
                   <Typography
-                        variant="h6"
-                        className="font-semibold text-gray-700 mb-2"
-                    >
-                        {item.question}
-                    </Typography>
+                    variant="h6"
+                    className="font-semibold text-gray-700 mb-2"
+                  >
+                    {item.question}
+                  </Typography>
                   <ul className="list-disc pl-6 mt-2">
                     {item.answers.map((answer, idx) => (
                       <li key={idx}>{answer}</li>
@@ -367,6 +455,46 @@ export default function DashboardTeamView() {
               ))
             ) : (
               <Typography>No open-ended questions available.</Typography>
+            )}
+          </div>
+        </div>
+      )}
+
+      {activeTab === 2 && (
+        <div className="flex flex-col justify-center items-center mt-10">
+          <div className="w-full lg:w-3/4 bg-white p-8 rounded-lg shadow-lg">
+            <Typography variant="h6" className="mb-4">
+              Detailed View (Over Time)
+            </Typography>
+
+            {/* Dropdown for numerical questions */}
+            <div className="mb-4">
+              <Autocomplete
+                fullWidth
+                options={numericalQuestions}
+                getOptionLabel={(option) => option}
+                value={selectedQuestion || null}
+                onChange={handleQuestionChange}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Select Question"
+                    variant="outlined"
+                  />
+                )}
+              />
+            </div>
+
+            {overTimeChartData ? (
+              <div className="h-[600px] w-full">
+                <Line data={overTimeChartData} options={lineChartOptions} />
+              </div>
+            ) : (
+              <Typography>
+                {selectedQuestion
+                  ? 'No data available for this question.'
+                  : 'Please select a question to view the over-time graph.'}
+              </Typography>
             )}
           </div>
         </div>

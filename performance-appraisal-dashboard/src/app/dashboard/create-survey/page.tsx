@@ -66,7 +66,7 @@ export default function CreateSurvey() {
             createSurvey(survey);
             console.log("Done");
             
-            router.push("/dashboard")
+            router.push("/dashboard/send-survey/reviewee")
         }
     };
 
